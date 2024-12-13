@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Homepage</title>
+    <style>
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            text-align: center;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    
+
+
+    <h2>Welcome to the Game Homepage</h2>
+    <button class="gameCategoryBtn" data-category="/wingo">Wingo</button>
+    <button class="gameCategoryBtn" data-category="/trx_wingo">TRX</button>
+    <button class="gameCategoryBtn" data-category="/trx_block">TRX</button>
+
+    <!-- The Modal -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p id="modalMessage"></p>
+        </div>
+    </div>
+
+    <script>
+        class Modal {
+            constructor(modalId, messageElementId) {
+                this.modal = document.getElementById(modalId);
+                this.modalMessage = document.getElementById(messageElementId);
+                this.closeButton = this.modal.querySelector('.close');
+
+                this.closeButton.onclick = () => this.hide();
+                window.onclick = (event) => {
+                    if (event.target == this.modal) {
+                        this.hide();
+                    }
+                };
+            }
+
+            show(message) {
+                this.modalMessage.textContent = message;
+                this.modal.style.display = "block";
+            }
+
+            hide() {
+                this.modal.style.display = "none";
+            }
+        }
+
+        class Game {
+            constructor(modal) {
+                this.modal = modal;
+                this.init();
+            }
+
+            init() {
+                document.querySelectorAll('.gameCategoryBtn').forEach(button => {
+                    button.onclick = () => this.checkBalance(button.dataset.category);
+                });
+            }
+
+            async checkBalance(category) {
+                try {
+                    // Simulate a server response
+                    const response = { success: false, message: "Insufficient balance. Access denied." };
+                    
+                    if (!response.success) {
+                        this.modal.show(response.message);
+                    } else {
+                        alert(`Balance is sufficient! You can play ${category}`);
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = new Modal('myModal', 'modalMessage');
+            new Game(modal);
+        });
+    </script>
+
+</body>
+</html>
