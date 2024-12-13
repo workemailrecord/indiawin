@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Arguments passed from GitHub Actions
+# Arguments passed from GitHub Action
 REPO_NAME=$1
 DOMAIN=$2
 
