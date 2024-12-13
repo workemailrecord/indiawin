@@ -1,4 +1,4 @@
-name: Deploy Website to Server
+name: Deploy Website to Server via SSH
 
 on:
   push:
@@ -14,23 +14,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Step 2: Set up SSH private key (duwin.pem) from a secret
-      - name: Write duwin.pem to a file
+      # Step 2: Set up SSH key for authentication
+      - name: Set up SSH key
         run: |
-          echo "${{ secrets.EC2_PRIVATE_KEY }}" > duwin.pem
-          chmod 600 duwin.pem
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/duwin.pem
+          chmod 600 ~/.ssh/duwin.pem
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
-      # Step 3: SCP to copy files to the server
-      - name: Deploy using SCP
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}             # Server IP or hostname
-          username: ${{ secrets.USERNAME }}     # SSH username
-          key_path: ./duwin.pem                 # Path to the private key (duwin.pem)
-          source: ./*                           # Files to copy
-          target: /var/www/your_project          # Target directory on the server
-          port: 22                              # SSH port
+      # Step 3: Deploy using SSH (Copy files or execute commands)
+      - name: Deploy using SSH
+        run: |
+          ssh -i ~/.ssh/duwin.pem -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
+            cd /var/www/your_project
+            git pull origin main
+            npm install
+            pm2 restart all
+          EOF
 
-      # Step 4: Clean up the private key
-      - name: Clean up private key
-        run: rm -f duwin.pem
+      # Step 4: Clean up private key
+      - name: Clean up SSH key
+        run: rm -f ~/.ssh/duwin.pem
