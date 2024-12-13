@@ -25,17 +25,16 @@ jobs:
     # Step 3: SSH into the server and execute the deployment commands
       - name: Deploy via SSH
         run: |
-          ssh -i ~/.ssh/duwin.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST}} << 'EOF'
+          ssh -i ~/.ssh/duwin.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             # Extract the repository name from the GitHub repository environment variable
             REPO_NAME=${{ github.repository }}
             # Replace "/" in the repository name (since GitHub repositories use "owner/repo" format)
             REPO_NAME=${REPO_NAME//\//_}
             
-            # Create the directory if it doesn't exist (using sudo)
+            # Create the directory if it doesn't exist
             if [ ! -d "/var/www/$REPO_NAME" ]; then
               echo "Directory /var/www/$REPO_NAME does not exist. Creating it now."
-              sudo mkdir -p /var/www/$REPO_NAME
-              sudo chown $USER:$USER /var/www/$REPO_NAME
+              mkdir -p /var/www/$REPO_NAME
             else
               echo "Directory /var/www/$REPO_NAME already exists."
             fi
