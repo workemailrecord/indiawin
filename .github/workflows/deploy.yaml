@@ -70,7 +70,7 @@ jobs:
             fi
             
             # Run Apache and SSL Configuration Script
-            ./deploy_apache_ssl.sh $REPO_NAME ${{ secrets.DOMAIN }}
+            ./deploy_site.sh $REPO_NAME ${{ secrets.DOMAIN }}
 
           EOF
 
