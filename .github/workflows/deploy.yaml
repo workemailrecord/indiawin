@@ -69,8 +69,16 @@ jobs:
               pm2 start npm --name "$REPO_NAME" -- start
             fi
             
-            # Run Apache and SSL Configuration Script
-            sudo chmod +x ./deploy.sh $REPO_NAME ${{ secrets.DOMAIN }}
+          # Ensure deploy.sh has execute permissions before running it
+            sudo chmod +x ./deploy.sh
+
+            # Run Apache and SSL Configuration Script from /home/ubuntu
+            if [ -f "./deploy.sh" ]; then
+              echo "Running Apache and SSL configuration script..."
+              sudo ./deploy.sh $REPO_NAME ${{ secrets.DOMAIN }}
+            else
+              echo "deploy.sh not found in /home/ubuntu. Skipping Apache configuration."
+            fi
 
           EOF
 
