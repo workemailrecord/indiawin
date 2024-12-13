@@ -31,10 +31,11 @@ jobs:
             # Replace "/" in the repository name (since GitHub repositories use "owner/repo" format)
             REPO_NAME=${REPO_NAME//\//_}
             
-            # Create the directory if it doesn't exist
+            # Create the directory if it doesn't exist (using sudo)
             if [ ! -d "/var/www/$REPO_NAME" ]; then
               echo "Directory /var/www/$REPO_NAME does not exist. Creating it now."
-              mkdir -p /var/www/$REPO_NAME
+              sudo mkdir -p /var/www/$REPO_NAME
+              sudo chown $USER:$USER /var/www/$REPO_NAME
             else
               echo "Directory /var/www/$REPO_NAME already exists."
             fi
@@ -42,19 +43,40 @@ jobs:
             # Navigate to the project directory
             cd /var/www/$REPO_NAME
 
-            # Pull the latest code from the Git repository
-            git pull origin main
+            # If this is a new project, clone the repository, otherwise pull the latest changes
+            if [ ! -d ".git" ]; then
+              echo "No Git repository found, cloning the repository..."
+              git clone https://github.com/${{ github.repository }} .
+            else
+              echo "Git repository exists, pulling the latest changes..."
+              git pull origin main
+            fi
 
-            # Install necessary dependencies
-            npm install
+            # Install necessary dependencies if package.json is found
+            if [ -f "package.json" ]; then
+              echo "Installing npm dependencies..."
+              npm install
+            else
+              echo "No package.json found, skipping npm install."
+            fi
 
-            # Restart the application using PM2
-            pm2 restart all
+            # Restart the application using PM2 if processes are running
+            if pm2 list | grep -q "$REPO_NAME"; then
+              echo "PM2 processes found, restarting all..."
+              pm2 restart all
+            else
+              echo "No PM2 processes found, starting application..."
+              pm2 start npm --name "$REPO_NAME" -- start
+            fi
 
             # Run the custom deploy script with domain and port parameters
-            DOMAIN=frepo.dev
-            PORT=3000
-            ./deploy_site.sh frepo $DOMAIN $PORT
+            if [ -f "./deploy_site.sh" ]; then
+              DOMAIN=frepo.dev
+              PORT=3000
+              ./deploy_site.sh frepo $DOMAIN $PORT
+            else
+              echo "deploy_site.sh not found, skipping deploy script."
+            fi
           EOF
 
       # Step 4: Clean up SSH key after use
