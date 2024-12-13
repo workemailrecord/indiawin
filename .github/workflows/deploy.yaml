@@ -24,7 +24,7 @@ jobs:
       - name: Deploy using SCP
         uses: appleboy/scp-action@master
         with:
-          host: ${{ secrets.HOST }}             # Server IP or hostname
+          host: ${{ secrets.EC2_HOST }}             # Server IP or hostname
           username: ${{ secrets.USERNAME }}     # SSH username
           key_path: ./duwin.pem                 # Path to the private key (duwin.pem)
           source: ./*                           # Files to copy
