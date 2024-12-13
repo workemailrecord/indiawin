@@ -22,16 +22,41 @@ jobs:
           chmod 600 ~/.ssh/duwin.pem
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      # Step 3: Deploy using SSH (Copy files or execute commands)
-      - name: Deploy using SSH
+    # Step 3: SSH into the server and execute the deployment commands
+      - name: Deploy via SSH
         run: |
           ssh -i ~/.ssh/duwin.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /var/www/your_project
+            # Extract the repository name from the GitHub repository environment variable
+            REPO_NAME=${{ github.repository }}
+            # Replace "/" in the repository name (since GitHub repositories use "owner/repo" format)
+            REPO_NAME=${REPO_NAME//\//_}
+            
+            # Create the directory if it doesn't exist
+            if [ ! -d "/var/www/$REPO_NAME" ]; then
+              echo "Directory /var/www/$REPO_NAME does not exist. Creating it now."
+              mkdir -p /var/www/$REPO_NAME
+            else
+              echo "Directory /var/www/$REPO_NAME already exists."
+            fi
+
+            # Navigate to the project directory
+            cd /var/www/$REPO_NAME
+
+            # Pull the latest code from the Git repository
             git pull origin main
+
+            # Install necessary dependencies
             npm install
+
+            # Restart the application using PM2
             pm2 restart all
+
+            # Run the custom deploy script with domain and port parameters
+            DOMAIN=frepo.dev
+            PORT=3000
+            ./deploy_site.sh frepo $DOMAIN $PORT
           EOF
 
-      # Step 4: Clean up private key
+      # Step 4: Clean up SSH key after use
       - name: Clean up SSH key
         run: rm -f ~/.ssh/duwin.pem
