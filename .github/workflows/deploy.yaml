@@ -70,13 +70,36 @@ jobs:
               pm2 start npm --name "$REPO_NAME" -- start
             fi
 
-            # Run the custom deploy script with domain and port parameters
-            if [ -f "./deploy_site.sh" ]; then
-              DOMAIN=frepo.dev
-              PORT=3000
-              ./deploy_site.sh frepo $DOMAIN $PORT
+            # Apache Virtual Host Configuration
+            APACHE_CONF="/etc/apache2/sites-available/$REPO_NAME.conf"
+            if [ ! -f "$APACHE_CONF" ]; then
+              echo "Creating Apache Virtual Host configuration for $REPO_NAME"
+              
+              # Create the Apache config file for the domain
+              sudo bash -c "cat > $APACHE_CONF <<EOL
+<VirtualHost *:80>
+    ServerAdmin webmaster@$REPO_NAME
+    ServerName $REPO_NAME
+    DocumentRoot /var/www/$REPO_NAME
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+EOL"
+              
+              # Enable the new site configuration
+              sudo a2ensite $REPO_NAME.conf
+              sudo systemctl reload apache2
             else
-              echo "deploy_site.sh not found, skipping deploy script."
+              echo "Apache configuration for $REPO_NAME already exists."
+            fi
+
+            # SSL Configuration with Certbot (Let's Encrypt)
+            if ! sudo certbot certificates | grep -q "$REPO_NAME"; then
+              echo "SSL certificate not found for $REPO_NAME, acquiring one..."
+              sudo certbot --apache -d $REPO_NAME --non-interactive --agree-tos --email your-email@example.com
+              sudo systemctl reload apache2
+            else
+              echo "SSL certificate already exists for $REPO_NAME."
             fi
           EOF
 
