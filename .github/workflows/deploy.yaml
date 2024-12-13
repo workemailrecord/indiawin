@@ -17,7 +17,7 @@ jobs:
       # Step 2: Set up SSH private key (duwin.pem) from a secret
       - name: Write duwin.pem to a file
         run: |
-          echo "${{ secrets.DUWIN_PEM }}" > duwin.pem
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > duwin.pem
           chmod 600 duwin.pem
 
       # Step 3: SCP to copy files to the server
