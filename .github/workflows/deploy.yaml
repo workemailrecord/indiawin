@@ -26,7 +26,7 @@ jobs:
       - name: Deploy via SSH
         run: |
           ssh -i ~/.ssh/duwin.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            # Extract the repository name from the GitHub repository environment variable
+                      # Extract the repository name from the GitHub repository environment variable
             REPO_NAME=${{ github.repository }}
             # Replace "/" in the repository name (since GitHub repositories use "owner/repo" format)
             REPO_NAME=${REPO_NAME//\//_}
@@ -43,9 +43,10 @@ jobs:
             # Navigate to the project directory
             cd /var/www/$REPO_NAME
 
-            # If this is a new project, clone the repository, otherwise pull the latest changes
+            # If this is a new project or the directory is not a Git repository, clone it
             if [ ! -d ".git" ]; then
-              echo "No Git repository found, cloning the repository..."
+              echo "No Git repository found, cleaning the directory and cloning the repository..."
+              rm -rf /var/www/$REPO_NAME/* # Clean the existing files
               git clone https://github.com/${{ github.repository }} .
             else
               echo "Git repository exists, pulling the latest changes..."
