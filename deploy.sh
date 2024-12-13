@@ -1,58 +1,45 @@
 #!/bin/bash
 
-# Custom script to configure Apache VirtualHost and SSL certificates
+# Arguments passed from GitHub Actions
 REPO_NAME=$1
 DOMAIN=$2
 
-# 1. Install Apache (if not already installed)
-if ! command -v apache2 &> /dev/null
-then
-  echo "Apache not found. Installing..."
-  sudo apt-get update
-  sudo apt-get install -y apache2
-fi
+# Set the hard-coded port (e.g., 3001, 3002, etc.)
+PORT=3000   # You can change this as required for different websites
 
-# 2. Create Apache VirtualHost Configuration
-APACHE_CONF="/etc/apache2/sites-available/$DOMAIN.conf"
+# Ensure Apache is installed
+sudo apt update && sudo apt install -y apache2
 
-if [ ! -f "$APACHE_CONF" ]; then
-  echo "Creating Apache VirtualHost configuration for $DOMAIN"
+# Enable mod_proxy and mod_proxy_http
+sudo a2enmod proxy
+sudo a2enmod proxy_http
 
-  # Create VirtualHost for the domain
-  sudo bash -c "cat > $APACHE_CONF <<EOL
+# Create VirtualHost configuration for the domain and port
+echo "Creating Apache VirtualHost configuration for $DOMAIN on port $PORT"
+sudo bash -c "cat > /etc/apache2/sites-available/$REPO_NAME.conf <<EOF
 <VirtualHost *:80>
-    ServerAdmin webmaster@$DOMAIN
-    ServerName $DOMAIN
+    ServerAdmin webmaster@localhost
     DocumentRoot /var/www/$REPO_NAME
+    ServerName $DOMAIN
+
+    # Reverse Proxy settings for the hard-coded port
+    ProxyPass / http://localhost:$PORT/
+    ProxyPassReverse / http://localhost:$PORT/
+
     ErrorLog \${APACHE_LOG_DIR}/error.log
     CustomLog \${APACHE_LOG_DIR}/access.log combined
 </VirtualHost>
-EOL"
+EOF"
 
-  # Enable the site and reload Apache
-  sudo a2ensite $DOMAIN.conf
-  sudo systemctl reload apache2
-else
-  echo "Apache configuration for $DOMAIN already exists."
-fi
+# Enable the site
+sudo a2ensite $REPO_NAME.conf
 
-# 3. Install SSL Certificate using Let's Encrypt (Certbot)
-if ! sudo certbot certificates | grep -q "$DOMAIN"; then
-  echo "SSL certificate not found for $DOMAIN. Installing using Certbot..."
-  
-  # Install Certbot if not installed
-  if ! command -v certbot &> /dev/null
-  then
-    echo "Certbot not found. Installing..."
-    sudo apt-get update
-    sudo apt-get install -y certbot python3-certbot-apache
-  fi
-  
-  # Obtain SSL certificate
-  sudo certbot --apache -d $DOMAIN --non-interactive --agree-tos --email your-email@example.com
+# Reload Apache to apply changes
+sudo systemctl reload apache2
 
-  # Reload Apache after SSL installation
-  sudo systemctl reload apache2
-else
-  echo "SSL certificate already installed for $DOMAIN."
-fi
+
+# Enable necessary ports if needed
+sudo ufw allow $PORT/tcp
+
+# Restart Apache to apply any firewall rules
+sudo systemctl restart apache2
