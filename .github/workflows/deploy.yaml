@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repositorys
+      # Step 1: Checkout the repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -26,58 +26,46 @@ jobs:
       - name: Deploy via SSH
         run: |
           ssh -i ~/.ssh/duwin.pem -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
-            
+
+            # Setup repository details
             REPO_NAME=${{ github.repository }}
             REPO_NAME=${REPO_NAME//\//_} # Replace "/" in repo name
-            
-            # Create the directory if it doesn't exist (using sudo)
+
+            # Create the project directory if it doesn't exist
             if [ ! -d "/var/www/$REPO_NAME" ]; then
-              echo "Directory /var/www/$REPO_NAME does not exist. Creating it now."
+              echo "Creating directory /var/www/$REPO_NAME..."
               sudo mkdir -p /var/www/$REPO_NAME
               sudo chown $USER:$USER /var/www/$REPO_NAME
-            else
-              echo "Directory /var/www/$REPO_NAME already exists."
             fi
 
             # Navigate to the project directory
             cd /var/www/$REPO_NAME
 
-            # If this is a new project or the directory is not a Git repository, clone it
+            # Clone or pull the repository
             if [ ! -d ".git" ]; then
-              echo "No Git repository found, cleaning the directory and cloning the repository..."
-              rm -rf /var/www/$REPO_NAME/* # Clean the existing files
+              echo "Cloning repository..."
               git clone https://github.com/${{ github.repository }} .
             else
-              echo "Git repository exists, pulling the latest changes..."
+              echo "Pulling latest changes..."
               git pull origin main
             fi
 
-            # Install necessary dependencies if package.json is found
+            # Install dependencies if package.json exists
             if [ -f "package.json" ]; then
-              echo "Installing npm dependencies..."
+              echo "Installing dependencies..."
               npm install
             else
-              echo "No package.json found, skipping npm install."
+              echo "No package.json found, skipping dependency installation."
             fi
 
-            # Restart the application using PM2 if processes are running
+            # Start or restart the application using PM2
             if pm2 list | grep -q "$REPO_NAME"; then
-              echo "PM2 processes found, restarting all..."
-              pm2 restart all
+              echo "Restarting PM2 process..."
+              pm2 restart "$REPO_NAME"
             else
-              echo "No PM2 processes found, starting application..."
+              echo "Starting PM2 process..."
               pm2 start npm --name "$REPO_NAME" -- start
-            fi
-            
-          # Ensure deploy.sh has execute permissions before running it
-            sudo chmod +x ./deploy.sh
-
-            # Run Apache and SSL Configuration Script from /home/ubuntu
-            if [ -f "./deploy.sh" ]; then
-              echo "Running Apache and SSL configuration script..."
-              sudo ./deploy.sh $REPO_NAME ${{ secrets.DOMAIN }}
-            else
-              echo "deploy.sh not found in /home/ubuntu. Skipping Apache configuration."
+              pm2 save  # Save PM2 configuration to restart on reboot
             fi
 
           EOF
